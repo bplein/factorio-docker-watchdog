@@ -1,5 +1,5 @@
 FROM golang:1.17-alpine AS build
-WORKDIR /go/src/github.com/bplein/factorio-docker-watchdog
+WORKDIR /go/src/factorio-docker-watchdog
 RUN apk add --no-cache --no-progress g++ git
 COPY . .
 RUN go get ./... && \
@@ -11,5 +11,5 @@ RUN adduser -D -u 678 watchdog && \
   mkdir /usr/watchdog && \
   chown watchdog:watchdog /usr/watchdog
 USER watchdog
-COPY --from=build /go/src/github.com/bplein/factorio-docker-watchdog/app /app
+COPY --from=build /go/src/factorio-docker-watchdog/app /app
 CMD ["/app"]

@@ -8,23 +8,15 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
-	"regexp"
 	"sort"
 	"strings"
 
 	"github.com/sirupsen/logrus"
-
-	"github.com/blang/semver"
 )
 
 const (
 	templateTagsPrefix = "<!-- start autogeneration tags -->"
 	templateTagsSuffix = "<!-- end autogeneration tags -->"
-)
-
-var (
-	reDockerfileVersion = regexp.MustCompile(`(VERSION=)(\d+\.\d+\.\d+)`)
-	reDockerfileSHA256  = regexp.MustCompile(`(SHA256=)([a-z0-9]+)`)
 )
 
 func gitSetupCredentials() error {
@@ -46,16 +38,6 @@ func gitSetupCredentials() error {
 func gitCloneRepo(path string) error {
 	logrus.Debugln("git clone", fmt.Sprintf("https://github.com/%s/%s.git", githubRepoOwner, githubRepoName))
 	cmd := exec.Command("git", "clone", fmt.Sprintf("https://%s:%s@github.com/%s/%s.git", githubUser, githubToken, githubRepoOwner, githubRepoName), path)
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return errors.New(string(output))
-	}
-	return nil
-}
-
-func gitCheckoutBranch(path string, branch string) error {
-	cmd := exec.Command("git", "checkout", "-b", branch)
-	cmd.Dir = path
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return errors.New(string(output))
@@ -93,42 +75,6 @@ func gitPush(path string, branch string) error {
 	if err != nil {
 		return errors.New(string(output))
 	}
-	return nil
-}
-
-func gitTagAndPush(path string, tagName string) error {
-	cmd := exec.Command("git", "tag", tagName)
-	cmd.Dir = path
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return errors.New(string(output))
-	}
-
-	cmd = exec.Command("git", "push", "origin", tagName)
-	cmd.Dir = path
-	output, err = cmd.CombinedOutput()
-	if err != nil {
-		return errors.New(string(output))
-	}
-	return nil
-
-}
-
-func editDockerfile(path string, version semver.Version, checksum string) error {
-	filename := fmt.Sprintf("%s/%d.%d/Dockerfile", path, version.Major, version.Minor)
-
-	file, err := ioutil.ReadFile(filename)
-	if err != nil {
-		return err
-	}
-	file = reDockerfileVersion.ReplaceAll(file, []byte("${1}"+version.String()))
-	file = reDockerfileSHA256.ReplaceAll(file, []byte("${1}"+checksum))
-
-	err = ioutil.WriteFile(filename, file, 0666)
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
 
