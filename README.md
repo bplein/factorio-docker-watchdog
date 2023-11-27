@@ -15,8 +15,8 @@ Below you find a list with all required and optional variables.
 - **GITHUB_TOKEN**: GitHub token used for api calls, git pull and push
 - **GITHUB_REPO_OWNER**: GitHub Username/Organization where to push to
 - **GITHUB_REPO_NAME**: GitHub Repository where to push to
+- **LOWEST_CHECK_VERSION**: Ignore attempting to get new versions below this version. 
 
 ### Optional
 
 - **DISCORD_WEBHOOK_URL**: Discord webhook url for announcements
-- **VERSION_FIX**: If the watchdog fails cause the repository is already on the latest version set this variable to the latest version

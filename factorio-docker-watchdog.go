@@ -98,55 +98,67 @@ func checkVersion() {
 	}
 	stableFound := false
 	checks := checksums{}
+
+	osLowestCheckVersion := os.Getenv("LOWEST_CHECK_VERSION")
+	if err != nil {
+		logrus.Panicln(err)
+	}
+	lowestcheckVersion, err := semver.Make(osLowestCheckVersion)
+	if err != nil {
+		logrus.Error(err)
+	}
+	logrus.Infoln("LowestCheckVersion", osLowestCheckVersion)
+
 	for _, v := range lastVersions {
 		minorKey := fmt.Sprintf("%d.%d", v.Major, v.Minor)
+		if v.GT(lowestcheckVersion) {
+			// stable version exists and was not found in previous records
+			if !stableFound && stableVersion != nil && v.LT(*stableVersion) {
+				checksum, err := checks.getChecksum(*stableVersion)
+				if err != nil {
+					logrus.Panicln(err)
+				}
+				if checksum != "" {
+					version := BuildInfoVersion{
+						SHA256: checksum,
+						Tags: []string{
+							stableVersion.String(),
+							"stable",
+						},
+					}
+					buildinfo.Versions[stableVersion.String()] = version
+				}
+			}
 
-		// stable version exists and was not found in previous records
-		if !stableFound && stableVersion != nil && v.LT(*stableVersion) {
-			checksum, err := checks.getChecksum(*stableVersion)
+			checksum, err := checks.getChecksum(v)
 			if err != nil {
 				logrus.Panicln(err)
 			}
-			if checksum != "" {
-				version := BuildInfoVersion{
-					SHA256: checksum,
-					Tags: []string{
-						stableVersion.String(),
-						"stable",
-					},
-				}
-				buildinfo.Versions[stableVersion.String()] = version
+			if checksum == "" {
+				continue
 			}
-		}
 
-		checksum, err := checks.getChecksum(v)
-		if err != nil {
-			logrus.Panicln(err)
+			version := BuildInfoVersion{
+				SHA256: checksum,
+				Tags: []string{
+					v.String(),
+				},
+			}
+			if highestMajor[v.Major].EQ(v) {
+				version.Tags = append(version.Tags, fmt.Sprintf("%d", v.Major))
+			}
+			if highestMinor[minorKey].EQ(v) {
+				version.Tags = append(version.Tags, minorKey)
+			}
+			if v.EQ(lastVersion) {
+				version.Tags = append(version.Tags, "latest")
+			}
+			if stableVersion != nil && v.EQ(*stableVersion) {
+				version.Tags = append(version.Tags, "stable")
+				stableFound = true
+			}
+			buildinfo.Versions[v.String()] = version
 		}
-		if checksum == "" {
-			continue
-		}
-
-		version := BuildInfoVersion{
-			SHA256: checksum,
-			Tags: []string{
-				v.String(),
-			},
-		}
-		if highestMajor[v.Major].EQ(v) {
-			version.Tags = append(version.Tags, fmt.Sprintf("%d", v.Major))
-		}
-		if highestMinor[minorKey].EQ(v) {
-			version.Tags = append(version.Tags, minorKey)
-		}
-		if v.EQ(lastVersion) {
-			version.Tags = append(version.Tags, "latest")
-		}
-		if stableVersion != nil && v.EQ(*stableVersion) {
-			version.Tags = append(version.Tags, "stable")
-			stableFound = true
-		}
-		buildinfo.Versions[v.String()] = version
 	}
 
 	updateVersion(buildinfo)
